@@ -1,0 +1,80 @@
+============================================================
+INVOICE OCR & AI LEARNING SYSTEM - DOCUMENTATION
+============================================================
+
+1. SYSTEM OVERVIEW
+------------------
+This system is a multi-tenant OCR pipeline that uses Tesseract for extraction 
+and a JSON-based "Correction Memory" to automatically fix OCR hallucinations 
+over time. It follows a "Human-in-the-loop" philosophy.
+
+2. CORE COMPONENTS
+------------------
+A. api/app.py (The Gateway)
+   - Handles invoice uploads and pushes them to the processing queue.
+   - Accepts corrected Excel files from users to trigger AI learning.
+   - Decoupled from disk history via hidden metadata inside Excel files.
+
+B. worker.py (The Orchestrator)
+   - Runs as a background service.
+   - Monitors /queue/pending for new jobs.
+   - Routes processed files to Tenant-specific 'clean' or 'review' folders.
+
+C. main.py (The Engine)
+   - Coordinates Preprocessing -> OCR -> Layout -> Parsing -> Review -> Output.
+   - Now supports 'tenant_id' to ensure client-specific AI memory is used.
+
+D. mass_train.py (The Brain Updater)
+   - Scans 'corrected' folders to batch-learn from human adjustments.
+   - Handles tenant identification and automatic archiving.
+
+3. DATA FLOW
+------------
+1. Upload: Client -> API -> /queue/pending
+2. Process: Worker -> Main Pipeline -> OCR -> AI Auto-Correction (Memory)
+3. Audit: Output Excel generated with Status (OK, REVIEW, or AUTO_FIXED).
+4. Feedback: User fixes Excel -> Uploads to API -> AI memory is versioned.
+
+
+
+4. DIRECTORY STRUCTURE
+----------------------
+/queue
+  /pending      <-- Raw uploads wait here
+  /processing   <-- Current active jobs
+  /error        <-- Failed jobs
+/runtime
+  /tenants
+    /{tenant_id}
+      /clean    <-- High confidence results
+      /review   <-- Needs human check (or AUTO_FIXED)
+      /originals <-- Original images
+/memory
+  /tenants
+    /{tenant_id}
+      /correction_memory.json <-- The AI's "Brain"
+      /versions              <-- Backup history of the brain
+
+5. HOW TO RUN
+-------------
+# Start the API (Terminal 1)
+uvicorn api.app:app --reload --port 8000
+
+# Start the Worker (Terminal 2)
+python worker.py
+
+# Run System Health Check
+python system_health.py
+
+# Perform Batch Learning
+python mass_train.py
+
+6. KEY FEATURES
+---------------
+- Multi-Tenancy: Each client has their own independent AI memory.
+- Versioning: Every time the AI learns, a snapshot of the old brain is saved.
+- Metadata-Driven: Corrected files can be re-uploaded without server-side state.
+- Auto-Correction: AI fixes "V0D4F0NE" -> "VODAFONE" automatically before 
+  the user even opens the Excel.
+
+============================================================

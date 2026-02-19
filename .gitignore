@@ -1,0 +1,18 @@
+# Python (Backend)
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+backend/database/*.db
+backend/uploads/
+backend/runtime/
+
+# Node (Frontend)
+frontend/node_modules/
+frontend/.next/
+frontend/.env*
+frontend/out/
+
+# System/IDE
+.DS_Store
+.vscode/
